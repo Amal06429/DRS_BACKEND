@@ -48,3 +48,37 @@ class DoctorAppointmentsView(APIView):
         serializer = AppointmentSerializer(appointments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+class UpdateAppointmentStatusView(APIView):
+    """API endpoint for admin to update appointment status"""
+    permission_classes = [IsAdminUser]
+    
+    def patch(self, request, appointment_id):
+        try:
+            appointment = Appointment.objects.get(id=appointment_id)
+        except Appointment.DoesNotExist:
+            return Response({
+                'error': 'Appointment not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        new_status = request.data.get('status')
+        if not new_status:
+            return Response({
+                'error': 'Status is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        valid_statuses = ['pending', 'confirmed', 'completed', 'cancelled']
+        if new_status not in valid_statuses:
+            return Response({
+                'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        appointment.status = new_status
+        appointment.save()
+        
+        serializer = AppointmentSerializer(appointment)
+        return Response({
+            'message': 'Appointment status updated successfully',
+            'appointment': serializer.data
+        }, status=status.HTTP_200_OK)
+
