@@ -21,6 +21,7 @@ class Doctor(models.Model):
     department    = models.CharField(max_length=10, blank=True, null=True)
     avgcontime    = models.IntegerField(blank=True, null=True)
     qualification = models.CharField(max_length=100, blank=True, null=True)
+    photourl      = models.TextField(blank=True, null=True)
     synced_at     = models.TextField(blank=True, null=True)
 
     class Meta:

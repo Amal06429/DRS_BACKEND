@@ -3,7 +3,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
-from rest_framework.parsers import MultiPartParser, FormParser
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from hms_sync.models import Department, Doctor, DoctorTiming
@@ -49,43 +48,9 @@ class DoctorListByDepartmentView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class DoctorProfilePhotoUploadView(APIView):
-    """API endpoint to upload/update doctor profile photo"""
-    permission_classes = [AllowAny]  # Temporarily allow any for testing - change to IsAdminUser in production
-    parser_classes = (MultiPartParser, FormParser)
-    
-    def post(self, request, doctor_code):
-        try:
-            doctor = Doctor.objects.get(code=doctor_code)
-        except Doctor.DoesNotExist:
-            return Response({
-                'error': 'Doctor not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        # Get or create doctor profile
-        profile, created = DoctorProfile.objects.get_or_create(doctor=doctor)
-        
-        # Update profile photo
-        if 'profile_photo' in request.FILES:
-            profile.profile_photo = request.FILES['profile_photo']
-        
-        if 'bio' in request.data:
-            profile.bio = request.data.get('bio')
-        
-        profile.save()
-        
-        serializer = DoctorProfileSerializer(profile, context={'request': request})
-        return Response({
-            'message': 'Profile photo uploaded successfully',
-            'data': serializer.data
-        }, status=status.HTTP_200_OK)
-
-
 class DoctorOwnProfileView(APIView):
-    """API endpoint for doctors to view/update their own profile"""
+    """API endpoint for doctors to view/update their own profile (bio only - photo comes from HMS sync)"""
     permission_classes = [IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
     
     def get(self, request):
         try:
@@ -101,7 +66,7 @@ class DoctorOwnProfileView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
     
     def put(self, request):
-        """Allow doctor to update their own profile photo"""
+        """Allow doctor to update their bio only"""
         try:
             doctor_user = DoctorUser.objects.get(user=request.user)
             doctor = Doctor.objects.get(code=doctor_user.doctor_code)
@@ -109,14 +74,10 @@ class DoctorOwnProfileView(APIView):
             # Get or create doctor profile
             profile, created = DoctorProfile.objects.get_or_create(doctor=doctor)
             
-            # Update profile photo
-            if 'profile_photo' in request.FILES:
-                profile.profile_photo = request.FILES['profile_photo']
-            
+            # Update bio only
             if 'bio' in request.data:
                 profile.bio = request.data.get('bio')
-            
-            profile.save()
+                profile.save()
             
             serializer = DoctorSerializer(doctor, context={'request': request})
             return Response({

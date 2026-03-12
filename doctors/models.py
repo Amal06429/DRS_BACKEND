@@ -4,9 +4,8 @@ from hms_sync.models import Doctor
 # Create your models here.
 
 class DoctorProfile(models.Model):
-    """Model to store additional doctor information including profile photo"""
+    """Model to store additional doctor information (bio only - photo comes from HMS sync)"""
     doctor = models.OneToOneField(Doctor, on_delete=models.CASCADE, related_name='profile', to_field='code')
-    profile_photo = models.ImageField(upload_to='doctor_photos/', blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -14,29 +14,18 @@ class DoctorProfileSerializer(serializers.ModelSerializer):
     """Serializer for DoctorProfile model"""
     class Meta:
         model = DoctorProfile
-        fields = ['profile_photo', 'bio', 'updated_at']
+        fields = ['bio', 'updated_at']
 
 
 class DoctorSerializer(serializers.ModelSerializer):
-    """Serializer for Doctor model with profile photo"""
-    profile_photo = serializers.SerializerMethodField()
+    """Serializer for Doctor model with photo from HMS sync"""
+    photo_url = serializers.CharField(source='photourl', read_only=True)
     bio = serializers.SerializerMethodField()
     timings = serializers.SerializerMethodField()
     
     class Meta:
         model = Doctor
-        fields = ['code', 'name', 'rate', 'department', 'avgcontime', 'qualification', 'profile_photo', 'bio', 'timings']
-    
-    def get_profile_photo(self, obj):
-        try:
-            if hasattr(obj, 'profile') and obj.profile.profile_photo:
-                request = self.context.get('request')
-                if request:
-                    return request.build_absolute_uri(obj.profile.profile_photo.url)
-                return obj.profile.profile_photo.url
-        except DoctorProfile.DoesNotExist:
-            pass
-        return None
+        fields = ['code', 'name', 'rate', 'department', 'avgcontime', 'qualification', 'photo_url', 'bio', 'timings']
     
     def get_bio(self, obj):
         try:
