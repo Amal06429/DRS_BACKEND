@@ -21,10 +21,11 @@ class DoctorSerializer(serializers.ModelSerializer):
     """Serializer for Doctor model with profile photo"""
     profile_photo = serializers.SerializerMethodField()
     bio = serializers.SerializerMethodField()
+    timings = serializers.SerializerMethodField()
     
     class Meta:
         model = Doctor
-        fields = ['code', 'name', 'rate', 'department', 'avgcontime', 'qualification', 'profile_photo', 'bio']
+        fields = ['code', 'name', 'rate', 'department', 'avgcontime', 'qualification', 'profile_photo', 'bio', 'timings']
     
     def get_profile_photo(self, obj):
         try:
@@ -44,6 +45,11 @@ class DoctorSerializer(serializers.ModelSerializer):
         except DoctorProfile.DoesNotExist:
             pass
         return None
+    
+    def get_timings(self, obj):
+        """Get all timings for this doctor ordered by slot number"""
+        timings = DoctorTiming.objects.filter(code=obj.code).order_by('slno')
+        return DoctorTimingSerializer(timings, many=True).data
 
 
 class DoctorTimingSerializer(serializers.ModelSerializer):

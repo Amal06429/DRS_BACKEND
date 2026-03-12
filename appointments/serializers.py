@@ -11,7 +11,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ['id', 'patient_name', 'phone_number', 'email', 'doctor_code', 'doctor_name', 
-                  'department_code', 'department_name', 'appointment_date', 'created_at', 'status']
+                  'department_code', 'department_name', 'appointment_date', 'slot_number', 'created_at', 'status']
         read_only_fields = ['id', 'created_at']
     
     def get_doctor_name(self, obj):
@@ -47,7 +47,52 @@ class BookAppointmentSerializer(serializers.ModelSerializer):
     """Serializer for booking new appointments"""
     class Meta:
         model = Appointment
-        fields = ['patient_name', 'phone_number', 'email', 'doctor_code', 'department_code', 'appointment_date']
+        fields = ['patient_name', 'phone_number', 'email', 'doctor_code', 'department_code', 'appointment_date', 'slot_number']
+    
+    def validate(self, data):
+        """Check for booking conflicts"""
+        from datetime import timedelta
+        
+        doctor_code = data.get('doctor_code')
+        appointment_date = data.get('appointment_date')
+        slot_number = data.get('slot_number')
+        
+        # Check for existing appointments (exclude rejected)
+        existing_appointments = Appointment.objects.filter(
+            doctor_code=doctor_code,
+            status__in=['pending', 'accepted']
+        )
+        
+        # Check slot-based conflict (if slot_number is provided)
+        if slot_number:
+            # Check if same slot on same day is already booked
+            conflict = existing_appointments.filter(
+                slot_number=slot_number,
+                appointment_date__date=appointment_date.date()
+            ).exists()
+            
+            if conflict:
+                raise serializers.ValidationError({
+                    'error': f'Slot {slot_number} is already booked for this doctor on {appointment_date.date()}. Please choose another slot or time.'
+                })
+        
+        # Check time-based conflict (if manual time entry)
+        # Allow 30-minute buffer around each appointment
+        buffer_minutes = 30
+        time_start = appointment_date - timedelta(minutes=buffer_minutes)
+        time_end = appointment_date + timedelta(minutes=buffer_minutes)
+        
+        time_conflict = existing_appointments.filter(
+            appointment_date__gte=time_start,
+            appointment_date__lt=time_end
+        ).exists()
+        
+        if time_conflict:
+            raise serializers.ValidationError({
+                'error': f'This time slot conflicts with an existing appointment. Please choose a different time (at least {buffer_minutes} minutes apart).'
+            })
+        
+        return data
     
     def validate_doctor_code(self, value):
         """Validate that doctor exists in HMS system"""

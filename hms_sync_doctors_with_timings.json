@@ -1,0 +1,15 @@
+{
+  "sync_timestamp": "2026-03-07 09:01:13.820527+00:00",
+  "total_hms_timing_records": 4,
+  "valid_doctors": [],
+  "missing_doctor_codes": [
+    "ISM",
+    "CMO",
+    "BR",
+    "RV"
+  ],
+  "summary": {
+    "doctors_found": 0,
+    "doctors_missing": 4
+  }
+}

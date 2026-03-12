@@ -67,7 +67,7 @@ class UpdateAppointmentStatusView(APIView):
                 'error': 'Status is required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        valid_statuses = ['pending', 'confirmed', 'completed', 'cancelled']
+        valid_statuses = ['pending', 'accepted', 'rejected']
         if new_status not in valid_statuses:
             return Response({
                 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'

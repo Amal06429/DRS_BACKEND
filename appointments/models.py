@@ -6,9 +6,8 @@ class Appointment(models.Model):
     """Model for storing appointment bookings"""
     STATUS_CHOICES = [
         ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
     ]
     
     patient_name = models.CharField(max_length=200)
@@ -17,6 +16,7 @@ class Appointment(models.Model):
     doctor_code = models.CharField(max_length=10)
     department_code = models.CharField(max_length=10)
     appointment_date = models.DateTimeField()
+    slot_number = models.BigIntegerField(blank=True, null=True)  # From DoctorTiming.slno
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     

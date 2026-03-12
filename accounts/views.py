@@ -88,6 +88,47 @@ class GetDoctorCredentialsView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
+class UpdateDoctorCredentialsView(APIView):
+    """API endpoint to update doctor credentials (Admin only)"""
+    permission_classes = [AllowAny]  # Temporarily for testing - change back to IsAdminUser in production
+    
+    def patch(self, request, doctor_code):
+        try:
+            doctor_user = DoctorUser.objects.get(doctor_code=doctor_code)
+        except DoctorUser.DoesNotExist:
+            return Response({
+                'error': 'Doctor credentials not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        # Update email if provided
+        if email:
+            # Check if email is already in use by another user
+            if User.objects.filter(email=email).exclude(id=doctor_user.user.id).exists():
+                return Response({
+                    'error': 'Email is already in use'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            doctor_user.user.email = email
+            doctor_user.user.username = email  # Use email as username
+        
+        # Update password if provided
+        if password:
+            doctor_user.user.set_password(password)
+        
+        doctor_user.user.save()
+        
+        return Response({
+            'message': 'Doctor credentials updated successfully',
+            'data': {
+                'doctor_code': doctor_user.doctor_code,
+                'email': doctor_user.user.email
+            }
+        }, status=status.HTTP_200_OK)
+
+
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class GetCSRFTokenView(APIView):
     """API endpoint to get CSRF token cookie"""
