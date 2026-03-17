@@ -5,8 +5,10 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from datetime import datetime
 from .models import Appointment
 from .serializers import AppointmentSerializer, BookAppointmentSerializer
+from .slot_utils import generate_slots
 
 # Create your views here.
 
@@ -21,7 +23,7 @@ class BookAppointmentView(APIView):
             appointment = serializer.save()
             response_serializer = AppointmentSerializer(appointment)
             return Response({
-                'message': 'Appointment booked successfully',
+                'message': 'Appointment booked successfully. Waiting for admin approval.',
                 'appointment': response_serializer.data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -32,7 +34,8 @@ class AdminAppointmentsView(APIView):
     permission_classes = [IsAdminUser]
     
     def get(self, request):
-        appointments = Appointment.objects.all()
+        # Admin sees ALL appointments (pending, accepted, rejected)
+        appointments = Appointment.objects.all().order_by('-created_at')
         serializer = AppointmentSerializer(appointments, many=True)
         return Response({
             'appointments': serializer.data
@@ -40,11 +43,16 @@ class AdminAppointmentsView(APIView):
 
 
 class DoctorAppointmentsView(APIView):
-    """API endpoint for doctors to view their appointments"""
+    """API endpoint for doctors to view their ACCEPTED appointments only"""
     permission_classes = [AllowAny]  # Should be authenticated doctor in production
     
     def get(self, request, doctor_code):
-        appointments = Appointment.objects.filter(doctor_code=doctor_code).order_by('-appointment_date')
+        # Doctors see ONLY accepted appointments
+        appointments = Appointment.objects.filter(
+            doctor_code=doctor_code,
+            status='accepted'  # Only accepted appointments
+        ).order_by('appointment_date')
+        
         serializer = AppointmentSerializer(appointments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -73,12 +81,42 @@ class UpdateAppointmentStatusView(APIView):
                 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        old_status = appointment.status
         appointment.status = new_status
         appointment.save()
         
+        message = f'Appointment {new_status}'
+        if new_status == 'accepted':
+            message = 'Appointment accepted. Doctor will now see this appointment.'
+        elif new_status == 'rejected':
+            message = 'Appointment rejected. Slot is now available for booking.'
+        
         serializer = AppointmentSerializer(appointment)
         return Response({
-            'message': 'Appointment status updated successfully',
+            'message': message,
             'appointment': serializer.data
         }, status=status.HTTP_200_OK)
 
+
+class DoctorSlotsView(APIView):
+    """API endpoint for dynamic slot generation"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        doctor_code = request.query_params.get('doctor_code')
+        date_str = request.query_params.get('date')
+        
+        if not doctor_code or not date_str:
+            return Response({
+                'error': 'doctor_code and date are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({
+                'error': 'Invalid date format. Use YYYY-MM-DD'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        slots = generate_slots(doctor_code, date)
+        return Response(slots, status=status.HTTP_200_OK)

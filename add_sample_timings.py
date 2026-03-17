@@ -1,66 +1,62 @@
 import os
 import django
+from datetime import datetime
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()
 
 from hms_sync.models import DoctorTiming, Doctor
-from datetime import datetime
 
-# Get some existing doctors
-doctors = Doctor.objects.all()[:10]
+print("\n" + "="*60)
+print("ADDING SAMPLE TIMING DATA FOR TESTING")
+print("="*60)
 
-print(f"\n{'='*60}")
-print(f"ADDING SAMPLE TIMING DATA")
-print(f"{'='*60}\n")
+# Get first 10 doctors with avgcontime
+sample_doctors = Doctor.objects.exclude(avgcontime__isnull=True)[:10]
 
-# Sample time slots
-sample_slots = [
-    (9.0, 10.0),   # 9:00 AM - 10:00 AM
-    (10.0, 11.0),  # 10:00 AM - 11:00 AM
-    (11.0, 12.0),  # 11:00 AM - 12:00 PM
-    (14.0, 15.0),  # 2:00 PM - 3:00 PM
-    (15.0, 16.0),  # 3:00 PM - 4:00 PM
-]
+sync_time = datetime.now().isoformat()
 
-slot_counter = 1
-for doctor in doctors:
-    if not doctor.code or doctor.code == '--':
+for idx, doctor in enumerate(sample_doctors):
+    # Check if timing already exists
+    existing = DoctorTiming.objects.filter(code=doctor.code).first()
+    
+    if existing and existing.t1 and existing.t2:
+        print(f"SKIP: {doctor.code} - {doctor.name} (already has timing)")
         continue
-        
-    print(f"Adding timings for: {doctor.code} - {doctor.name}")
     
-    # Check existing timings for this doctor
-    existing_timings = DoctorTiming.objects.filter(code=doctor.code)
-    
-    if existing_timings.exists():
-        # Update existing null timings with sample data
-        for i, timing in enumerate(existing_timings[:5]):
-            if i < len(sample_slots):
-                timing.t1 = sample_slots[i][0]
-                timing.t2 = sample_slots[i][1]
-                timing.synced_at = datetime.now().isoformat()
-                timing.save()
-                print(f"  Updated Slot {timing.slno}: {timing.t1} - {timing.t2}")
+    if existing:
+        # Update existing timing
+        existing.t1 = 9.0
+        existing.t2 = 17.0
+        existing.synced_at = sync_time
+        existing.save()
+        print(f"UPDATED: {doctor.code} - {doctor.name} (9:00 - 17:00)")
     else:
-        # Create new timing records
-        for i, (t1, t2) in enumerate(sample_slots[:3]):  # Add 3 slots per doctor
-            timing = DoctorTiming.objects.create(
-                slno=slot_counter,
-                code=doctor.code,
-                t1=t1,
-                t2=t2,
-                synced_at=datetime.now().isoformat()
+        # Create new timing using raw SQL to avoid managed=False issues
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO hms_doctorstiming (slno, code, t1, t2, synced_at) VALUES (%s, %s, %s, %s, %s)",
+                [2000 + idx, doctor.code, 9.0, 17.0, sync_time]
             )
-            print(f"  Created Slot {slot_counter}: {t1} - {t2}")
-            slot_counter += 1000  # Avoid conflicts with existing slot numbers
-    
-    print()
+        print(f"CREATED: {doctor.code} - {doctor.name} (9:00 - 17:00)")
 
-print(f"{'='*60}")
-print(f"DONE! Sample timing data added.")
-print(f"{'='*60}\n")
+print("\n" + "="*60)
+print("VERIFICATION")
+print("="*60)
 
-# Verify
-valid_count = DoctorTiming.objects.exclude(t1__isnull=True).exclude(t2__isnull=True).count()
-print(f"Total valid timing records now: {valid_count}")
+# Verify the data
+for doctor in sample_doctors[:5]:
+    timings = DoctorTiming.objects.filter(code=doctor.code, t1__isnull=False, t2__isnull=False)
+    if timings.exists():
+        for timing in timings:
+            print(f"{doctor.code} - {doctor.name}")
+            print(f"  Slot: {timing.slno}, Time: {timing.t1} - {timing.t2}, Duration: {doctor.avgcontime} min")
+    else:
+        print(f"{doctor.code} - {doctor.name} - NO TIMING DATA")
+
+print("\n" + "="*60)
+print("TEST THE API:")
+print("="*60)
+print("GET http://localhost:8000/api/slots/?doctor_code=001&date=2024-12-20")
+print("="*60)
