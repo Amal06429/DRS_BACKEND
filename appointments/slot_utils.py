@@ -36,7 +36,7 @@ def generate_slots(doctor_code, date):
         appointment_date__date=date,
         status__in=['pending', 'accepted']
     )
-    
+       
     # Create a set of booked slot identifiers (slot_number + time string)
     booked_slot_keys = set()
     for apt in booked_appointments:
