@@ -18,8 +18,22 @@ class AppointmentSerializer(serializers.ModelSerializer):
                   'appointment_time_range', 'slot_number', 'created_at', 'status']
         read_only_fields = ['id', 'created_at']
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Cache doctors and departments to avoid N+1 queries
+        if self.instance and hasattr(self.instance, '__iter__'):
+            doctor_codes = {obj.doctor_code for obj in self.instance}
+            dept_codes = {obj.department_code for obj in self.instance}
+            self._doctors_cache = {d.code: d for d in Doctor.objects.filter(code__in=doctor_codes)}
+            self._depts_cache = {d.code: d for d in Department.objects.filter(code__in=dept_codes)}
+        else:
+            self._doctors_cache = {}
+            self._depts_cache = {}
+    
     def get_doctor_name(self, obj):
-        """Get doctor name from HMS system"""
+        """Get doctor name from HMS system (cached)"""
+        if obj.doctor_code in self._doctors_cache:
+            return self._doctors_cache[obj.doctor_code].name
         try:
             doctor = Doctor.objects.get(code=obj.doctor_code)
             return doctor.name
@@ -27,7 +41,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
             return None
     
     def get_department_name(self, obj):
-        """Get department name from HMS system"""
+        """Get department name from HMS system (cached)"""
+        if obj.department_code in self._depts_cache:
+            return self._depts_cache[obj.department_code].name
         try:
             department = Department.objects.get(code=obj.department_code)
             return department.name
@@ -40,16 +56,22 @@ class AppointmentSerializer(serializers.ModelSerializer):
     
     def get_appointment_time_range(self, obj):
         """Get appointment time range (e.g., 09:00 - 09:15)"""
-        try:
-            doctor = Doctor.objects.get(code=obj.doctor_code)
+        doctor = None
+        if obj.doctor_code in self._doctors_cache:
+            doctor = self._doctors_cache[obj.doctor_code]
+        else:
+            try:
+                doctor = Doctor.objects.get(code=obj.doctor_code)
+            except Doctor.DoesNotExist:
+                pass
+        
+        if doctor:
             avgcontime = doctor.avgcontime or 15
-            
             start_time = obj.appointment_date
             end_time = start_time + timedelta(minutes=avgcontime)
-            
             return f"{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}"
-        except Doctor.DoesNotExist:
-            return obj.appointment_date.strftime('%H:%M')
+        
+        return obj.appointment_date.strftime('%H:%M')
     
     def validate_doctor_code(self, value):
         """Validate that doctor exists in HMS system"""

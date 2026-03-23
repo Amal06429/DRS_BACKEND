@@ -37,8 +37,20 @@ class DoctorSerializer(serializers.ModelSerializer):
     
     def get_timings(self, obj):
         """Get all timings for this doctor ordered by slot number"""
+        # Use prefetched timings if available, otherwise query
+        if hasattr(obj, '_prefetched_timings'):
+            return DoctorTimingSerializer(obj._prefetched_timings, many=True).data
         timings = DoctorTiming.objects.filter(code=obj.code).order_by('slno')
         return DoctorTimingSerializer(timings, many=True).data
+
+
+class DoctorListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for doctor lists (without timings)"""
+    photo_url = serializers.CharField(source='photourl', read_only=True)
+    
+    class Meta:
+        model = Doctor
+        fields = ['code', 'name', 'rate', 'department', 'avgcontime', 'qualification', 'photo_url']
 
 
 class DoctorTimingSerializer(serializers.ModelSerializer):

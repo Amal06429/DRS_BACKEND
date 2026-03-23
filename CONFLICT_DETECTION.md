@@ -79,8 +79,7 @@ const handleResponse = async (response) => {
 ## Database Schema
 **File**: `DRS_BACKEND/appointments/models.py`
 
-Added `slot_number` field to track slot-based bookings:
-
+Added `slot_number` field to track slot-based bookings:  
 ```python
 class Appointment(models.Model):
     slot_number = models.BigIntegerField(null=True, blank=True)

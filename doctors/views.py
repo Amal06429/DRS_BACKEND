@@ -5,8 +5,9 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.db.models import Prefetch
 from hms_sync.models import Department, Doctor, DoctorTiming
-from .serializers import DepartmentSerializer, DoctorSerializer, DoctorTimingSerializer, DoctorProfileSerializer
+from .serializers import DepartmentSerializer, DoctorSerializer, DoctorTimingSerializer, DoctorProfileSerializer, DoctorListSerializer
 from .models import DoctorProfile
 from accounts.models import DoctorUser
 
@@ -17,7 +18,7 @@ class DepartmentListView(APIView):
     permission_classes = [AllowAny]
     
     def get(self, request):
-        departments = Department.objects.all()
+        departments = Department.objects.all().only('code', 'name')
         serializer = DepartmentSerializer(departments, many=True)
         return Response({
             'departments': serializer.data
@@ -25,24 +26,29 @@ class DepartmentListView(APIView):
 
 
 class AllDoctorsView(APIView):
-    """API endpoint to get all doctors with profile photos"""
+    """API endpoint to get all doctors (lightweight - no timings)"""
     permission_classes = [AllowAny]
     
     def get(self, request):
-        doctors = Doctor.objects.all()
-        serializer = DoctorSerializer(doctors, many=True, context={'request': request})
+        # Use lightweight serializer without timings for faster loading
+        doctors = Doctor.objects.all().only(
+            'code', 'name', 'rate', 'department', 'avgcontime', 'qualification', 'photourl'
+        )
+        serializer = DoctorListSerializer(doctors, many=True, context={'request': request})
         return Response({
             'doctors': serializer.data
         }, status=status.HTTP_200_OK)
 
 
 class DoctorListByDepartmentView(APIView):
-    """API endpoint to get doctors by department code with profile photos"""
+    """API endpoint to get doctors by department code (lightweight)"""
     permission_classes = [AllowAny]
     
     def get(self, request, department_code):
-        doctors = Doctor.objects.filter(department=department_code)
-        serializer = DoctorSerializer(doctors, many=True, context={'request': request})
+        doctors = Doctor.objects.filter(department=department_code).only(
+            'code', 'name', 'rate', 'department', 'avgcontime', 'qualification', 'photourl'
+        )
+        serializer = DoctorListSerializer(doctors, many=True, context={'request': request})
         return Response({
             'doctors': serializer.data
         }, status=status.HTTP_200_OK)
