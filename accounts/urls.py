@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import AdminLoginView, DoctorLoginView, CreateDoctorUserView, GetCSRFTokenView, GetDoctorCredentialsView, UpdateDoctorCredentialsView
+from .views import AdminLoginView, DoctorLoginView, CreateDoctorUserView, GetCSRFTokenView, GetDoctorCredentialsView, UpdateDoctorCredentialsView, DeleteDoctorCredentialsView
 
 app_name = 'accounts'
 
@@ -9,5 +9,6 @@ urlpatterns = [
     path('admin/create-doctor-login', CreateDoctorUserView.as_view(), name='create-doctor-login'),
     path('admin/doctor-credentials', GetDoctorCredentialsView.as_view(), name='get-doctor-credentials'),
     path('admin/doctor-credentials/<str:doctor_code>', UpdateDoctorCredentialsView.as_view(), name='update-doctor-credentials'),
+    path('admin/doctor-credentials/<str:doctor_code>/delete', DeleteDoctorCredentialsView.as_view(), name='delete-doctor-credentials'),
     path('doctor/login', DoctorLoginView.as_view(), name='doctor-login'),
 ]

@@ -78,14 +78,16 @@ class CreateDoctorUserSerializer(serializers.Serializer):
     def create(self, validated_data):
         # Use email as username to satisfy Django's username requirement
         email = validated_data['email']
+        password = validated_data['password']
         user = User.objects.create_user(
             username=email,
-            password=validated_data['password'],
+            password=password,
             email=email
         )
         doctor_user = DoctorUser.objects.create(
             user=user,
-            doctor_code=validated_data['doctor_code']
+            doctor_code=validated_data['doctor_code'],
+            password=password  # Store plain text password for admin viewing
         )
         return doctor_user
 
@@ -99,7 +101,7 @@ class DoctorUserListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = DoctorUser
-        fields = ['id', 'doctor_code', 'doctor_name', 'department', 'email', 'username', 'created_at']
+        fields = ['id', 'doctor_code', 'doctor_name', 'department', 'email', 'username', 'password', 'created_at']
     
     def get_doctor_name(self, obj):
         """Get doctor name from HMS system"""

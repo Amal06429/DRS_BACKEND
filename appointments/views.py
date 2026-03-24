@@ -102,6 +102,26 @@ class UpdateAppointmentStatusView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class DeleteAppointmentView(APIView):
+    """API endpoint for admin to delete an appointment"""
+    permission_classes = [AllowAny]  # Temporarily allow any for testing
+    
+    def delete(self, request, appointment_id):
+        try:
+            appointment = Appointment.objects.get(id=appointment_id)
+        except Appointment.DoesNotExist:
+            return Response({
+                'error': 'Appointment not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        patient_name = appointment.patient_name
+        appointment.delete()
+        
+        return Response({
+            'message': f'Appointment for {patient_name} has been deleted successfully'
+        }, status=status.HTTP_200_OK)
+
+
 class DoctorSlotsView(APIView):
     """API endpoint for dynamic slot generation"""
     permission_classes = [AllowAny]

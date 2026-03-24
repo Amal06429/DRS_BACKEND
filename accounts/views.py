@@ -27,6 +27,7 @@ class AdminLoginView(APIView):
                     'id': user.id,
                     'username': user.username,
                     'email': user.email,
+                    'name': user.first_name or user.username,  # Use first_name if available
                     'is_staff': user.is_staff,
                     'is_superuser': user.is_superuser
                 }
@@ -45,6 +46,27 @@ class DoctorLoginView(APIView):
             user = serializer.validated_data['user']
             doctor_code = serializer.validated_data['doctor_code']
             login(request, user)
+            
+            # Fetch doctor information from HMS system
+            from hms_sync.models import Doctor
+            doctor_info = {}
+            try:
+                doctor = Doctor.objects.get(code=doctor_code)
+                doctor_info = {
+                    'name': doctor.name,
+                    'department': doctor.department,
+                    'photo_url': doctor.photourl,
+                    'specialization': doctor.qualification or doctor.department,
+                }
+            except Doctor.DoesNotExist:
+                # If doctor not found, use default values
+                doctor_info = {
+                    'name': 'Dr. ' + user.username,
+                    'department': 'Medical',
+                    'photo_url': None,
+                    'specialization': 'Medical',
+                }
+            
             return Response({
                 'message': 'Doctor login successful',
                 'doctor_code': doctor_code,
@@ -53,6 +75,7 @@ class DoctorLoginView(APIView):
                     'id': user.id,
                     'username': user.username,
                     'email': user.email,
+                    **doctor_info  # Include doctor details
                 }
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -117,8 +140,10 @@ class UpdateDoctorCredentialsView(APIView):
         # Update password if provided
         if password:
             doctor_user.user.set_password(password)
+            doctor_user.password = password  # Also store plain text for admin viewing
         
         doctor_user.user.save()
+        doctor_user.save()  # Save the DoctorUser to persist password field
         
         return Response({
             'message': 'Doctor credentials updated successfully',
@@ -126,6 +151,31 @@ class UpdateDoctorCredentialsView(APIView):
                 'doctor_code': doctor_user.doctor_code,
                 'email': doctor_user.user.email
             }
+        }, status=status.HTTP_200_OK)
+
+
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class DeleteDoctorCredentialsView(APIView):
+    """API endpoint to delete doctor credentials (Admin only)"""
+    permission_classes = [AllowAny]  # Temporarily for testing - change back to IsAdminUser in production
+    
+    def delete(self, request, doctor_code):
+        try:
+            doctor_user = DoctorUser.objects.get(doctor_code=doctor_code)
+        except DoctorUser.DoesNotExist:
+            return Response({
+                'error': 'Doctor credentials not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        doctor_name = doctor_user.user.get_full_name() or doctor_user.user.username
+        user_id = doctor_user.user.id
+        
+        # Delete the associated User object (this will cascade delete DoctorUser)
+        doctor_user.user.delete()
+        
+        return Response({
+            'message': f'Doctor credentials for {doctor_name} deleted successfully',
+            'deleted_id': user_id
         }, status=status.HTTP_200_OK)
 
 
