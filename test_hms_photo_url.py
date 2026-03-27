@@ -73,7 +73,7 @@ print("✓ Display <img src='https://your-hms-server.com/photos/doctors/029.jpg'
 print("✓ Show doctor photo (if URL is accessible)")
 print("✓ Show initials placeholder (if URL returns 404)")
 
-print("\n" + "="*80)
+print("\n" + "="*80)  
 print("HOW HMS SHOULD SYNC PHOTOS")
 print("="*80)
 print("""

@@ -34,9 +34,11 @@ class AdminAppointmentsView(APIView):
     permission_classes = [AllowAny]  # Temporarily allow any for testing
     
     def get(self, request):
-        # Admin sees ALL appointments (pending, accepted, rejected)
+        # Admin sees only accepted and rejected appointments (no pending)
         # Fetch only needed fields from Appointment model
-        appointments = Appointment.objects.all().only(
+        appointments = Appointment.objects.filter(
+            status__in=['accepted', 'rejected']
+        ).only(
             'id', 'patient_name', 'phone_number', 'email', 'doctor_code', 
             'department_code', 'appointment_date', 'slot_number', 'status', 'created_at'
         ).order_by('-created_at')
@@ -79,7 +81,7 @@ class UpdateAppointmentStatusView(APIView):
                 'error': 'Status is required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        valid_statuses = ['pending', 'accepted', 'rejected']
+        valid_statuses = ['accepted', 'rejected']
         if new_status not in valid_statuses:
             return Response({
                 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'

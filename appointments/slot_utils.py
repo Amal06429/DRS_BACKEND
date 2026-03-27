@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+from django.utils import timezone
 from hms_sync.models import DoctorTiming, Doctor
 from .models import Appointment
 
@@ -30,20 +31,20 @@ def generate_slots(doctor_code, date):
     if not timings.exists():
         return []
     
-    # Get booked appointments for the date (pending and accepted)
+    # Get booked appointments for the date (accepted only)
     booked_appointments = Appointment.objects.filter(
         doctor_code=doctor_code,
         appointment_date__date=date,
-        status__in=['pending', 'accepted']
+        status='accepted'
     )
-       
-    # Create a set of booked slot identifiers (slot_number + time string)
-    booked_slot_keys = set()
+    
+    # Create a set of booked times using a more reliable format
+    # Use the full datetime (with timezone) for accurate matching
+    booked_datetimes = set()
     for apt in booked_appointments:
-        # Use time string format HH:MM for comparison
-        time_str = apt.appointment_date.strftime('%H:%M')
-        slot_key = f"{apt.slot_number}_{time_str}"
-        booked_slot_keys.add(slot_key)
+        # Store as ISO format string for reliable comparison
+        apt_time_key = apt.appointment_date.strftime('%H:%M:%S')
+        booked_datetimes.add(apt_time_key)
     
     slots = []
     for timing in timings:
@@ -53,20 +54,18 @@ def generate_slots(doctor_code, date):
         if not start_time or not end_time:
             continue
         
-        current_datetime = datetime.combine(date, start_time)
-        end_datetime = datetime.combine(date, end_time)
+        # Create timezone-aware dates for proper comparison
+        current_datetime = timezone.make_aware(datetime.combine(date, start_time))
+        end_datetime = timezone.make_aware(datetime.combine(date, end_time))
         
         while current_datetime < end_datetime:
             slot_end = current_datetime + timedelta(minutes=avgcontime)
             if slot_end > end_datetime:
                 break
             
-            # Create slot key for comparison
-            slot_time_str = current_datetime.strftime('%H:%M')
-            slot_key = f"{timing.slno}_{slot_time_str}"
-            
-            # Check if this slot is booked
-            is_booked = slot_key in booked_slot_keys
+            # Create time key for reliable comparison
+            time_key = current_datetime.strftime('%H:%M:%S')
+            is_booked = time_key in booked_datetimes
             
             slots.append({
                 'slot_number': timing.slno,

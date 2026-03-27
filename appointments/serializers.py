@@ -101,7 +101,7 @@ class BookAppointmentSerializer(serializers.ModelSerializer):
         # Check for existing appointments (exclude rejected)
         existing_appointments = Appointment.objects.filter(
             doctor_code=doctor_code,
-            status__in=['pending', 'accepted']
+            status='accepted'
         )
         
         # Check slot-based conflict (if slot_number is provided)
@@ -134,5 +134,5 @@ class BookAppointmentSerializer(serializers.ModelSerializer):
         return value
     
     def create(self, validated_data):
-        validated_data['status'] = 'pending'
+        validated_data['status'] = 'accepted'
         return super().create(validated_data)
