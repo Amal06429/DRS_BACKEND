@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 from datetime import timedelta
 from .models import Appointment
 from hms_sync.models import Doctor, Department
@@ -51,11 +52,17 @@ class AppointmentSerializer(serializers.ModelSerializer):
             return None
     
     def get_appointment_time(self, obj):
-        """Get appointment time in HH:MM format"""
-        return obj.appointment_date.strftime('%H:%M')
+        """Get appointment time in HH:MM format (IST)"""
+        # Convert UTC to IST
+        if timezone.is_aware(obj.appointment_date):
+            local_date = timezone.localtime(obj.appointment_date)
+        else:
+            local_date = timezone.make_aware(obj.appointment_date, timezone.utc)
+            local_date = timezone.localtime(local_date)
+        return local_date.strftime('%H:%M')
     
     def get_appointment_time_range(self, obj):
-        """Get appointment time range (e.g., 09:00 - 09:15)"""
+        """Get appointment time range (e.g., 09:00 - 09:15) in IST"""
         doctor = None
         if obj.doctor_code in self._doctors_cache:
             doctor = self._doctors_cache[obj.doctor_code]
@@ -65,13 +72,19 @@ class AppointmentSerializer(serializers.ModelSerializer):
             except Doctor.DoesNotExist:
                 pass
         
+        # Convert UTC to IST
+        if timezone.is_aware(obj.appointment_date):
+            local_start_time = timezone.localtime(obj.appointment_date)
+        else:
+            local_start_time = timezone.make_aware(obj.appointment_date, timezone.utc)
+            local_start_time = timezone.localtime(local_start_time)
+        
         if doctor:
             avgcontime = doctor.avgcontime or 15
-            start_time = obj.appointment_date
-            end_time = start_time + timedelta(minutes=avgcontime)
-            return f"{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}"
+            local_end_time = local_start_time + timedelta(minutes=avgcontime)
+            return f"{local_start_time.strftime('%H:%M')} - {local_end_time.strftime('%H:%M')}"
         
-        return obj.appointment_date.strftime('%H:%M')
+        return local_start_time.strftime('%H:%M')
     
     def validate_doctor_code(self, value):
         """Validate that doctor exists in HMS system"""
@@ -91,6 +104,24 @@ class BookAppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ['patient_name', 'phone_number', 'email', 'doctor_code', 'department_code', 'appointment_date', 'slot_number']
+    
+    def validate_phone_number(self, value):
+        """Clean phone number by removing +, spaces, and dashes"""
+        if not value:
+            return value
+        
+        # Remove +, spaces, dashes, and parentheses
+        cleaned = value.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        
+        # Ensure only digits remain
+        if not cleaned.isdigit():
+            raise serializers.ValidationError("Phone number must contain only digits and +, spaces, or dashes")
+        
+        # Check phone length (typically 10-15 digits with country code)
+        if len(cleaned) < 10 or len(cleaned) > 15:
+            raise serializers.ValidationError("Phone number must be between 10 and 15 digits")
+        
+        return cleaned
     
     def validate(self, data):
         """Check for booking conflicts"""
