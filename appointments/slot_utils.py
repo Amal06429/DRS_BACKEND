@@ -2,6 +2,7 @@ from datetime import datetime, time, timedelta
 from django.utils import timezone
 from hms_sync.models import DoctorTiming, Doctor
 from .models import Appointment
+import pytz
 
 
 def float_to_time(float_time):
@@ -32,18 +33,37 @@ def generate_slots(doctor_code, date):
         return []
     
     # Get booked appointments for the date (accepted only)
+    # When filtering by date for appointments with timezone support:
+    # - The appointment_date is stored in UTC
+    # - We need to filter by the local date (Asia/Kolkata)
+    # - Convert the date to UTC boundaries for queries
+    
+    # Create IST timezone
+    ist = pytz.timezone('Asia/Kolkata')
+    
+    # Create IST dates for start and end of the day
+    start_of_day_ist = ist.localize(datetime.combine(date, time(0, 0, 0)))
+    end_of_day_ist = ist.localize(datetime.combine(date, time(23, 59, 59)))
+    
+    # Convert to UTC for database query
+    start_of_day_utc = start_of_day_ist.astimezone(pytz.UTC)
+    end_of_day_utc = end_of_day_ist.astimezone(pytz.UTC)
+    
     booked_appointments = Appointment.objects.filter(
         doctor_code=doctor_code,
-        appointment_date__date=date,
+        appointment_date__gte=start_of_day_utc,
+        appointment_date__lte=end_of_day_utc,
         status='accepted'
     )
     
     # Create a set of booked times using a more reliable format
-    # Use the full datetime (with timezone) for accurate matching
+    # Convert UTC appointment times to local timezone (IST) for accurate matching
     booked_datetimes = set()
     for apt in booked_appointments:
-        # Store as ISO format string for reliable comparison
-        apt_time_key = apt.appointment_date.strftime('%H:%M:%S')
+        # Convert UTC datetime to local timezone (IST)
+        local_apt_datetime = timezone.localtime(apt.appointment_date)
+        # Store as ISO format string for reliable comparison in local timezone
+        apt_time_key = local_apt_datetime.strftime('%H:%M:%S')
         booked_datetimes.add(apt_time_key)
     
     slots = []

@@ -129,7 +129,7 @@ def main():
     print("\n" + "="*60)
     print("APPOINTMENT API ENDPOINT TESTS")
     print("="*60)
-    print("\nMake sure the Django server is running on http://bookingdrs.com/api")
+    print("\nMake sure the Django server is running on http://bookingdrs.com")
     
     test_admin_appointments()
     test_doctor_appointments()
