@@ -3,7 +3,7 @@ import json
 
 print("Testing Admin Appointments API...")
 try:
-    response = requests.get('http://localhost:8000/api/admin/appointments')
+    response = requests.get('http://bookingdrs.com/api/admin/appointments')
     data = response.json()
     
     print(f'Status: {response.status_code}')

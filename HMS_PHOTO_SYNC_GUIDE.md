@@ -189,7 +189,7 @@ for doctor in doctors_with_photos[:5]:
 
 ### 2. Test API Response
 ```bash
-curl http://localhost:8000/api/doctors/RMO
+curl http://bookingdrs.com/api/doctors/RMO
 ```
 
 Should return:

@@ -1,7 +1,7 @@
 import requests
 from datetime import date, timedelta
 
-API_URL = "http://localhost:8000/api/slots/"
+API_URL = "http://bookingdrs.com/api/slots/"
 
 # Test with doctor 001
 doctor_code = "001"

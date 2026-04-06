@@ -12,7 +12,7 @@ import io
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = "http://bookingdrs.com/api"
 
 def test_admin_appointments():
     """Test admin appointments endpoint"""
@@ -129,7 +129,7 @@ def main():
     print("\n" + "="*60)
     print("APPOINTMENT API ENDPOINT TESTS")
     print("="*60)
-    print("\nMake sure the Django server is running on http://localhost:8000")
+    print("\nMake sure the Django server is running on http://bookingdrs.com/api")
     
     test_admin_appointments()
     test_doctor_appointments()

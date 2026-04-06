@@ -128,7 +128,7 @@ else:
     print("\n🚀 READY TO START:")
     print("   1. Start backend: python manage.py runserver")
     print("   2. Start frontend: cd ../DRHFRONTEND && npm run dev")
-    print("   3. Admin login: http://localhost:5173/admin/login")
-    print("   4. Doctor login: http://localhost:5173/doctor/login")
+    print("   3. Admin login:http://bookingdrs.com/admin/login")
+    print("   4. Doctor login:http://bookingdrs.com/doctor/login")
 
 print("\n" + "=" * 70)

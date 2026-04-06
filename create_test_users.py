@@ -88,13 +88,13 @@ print("LOGIN CREDENTIALS")
 print("=" * 60)
 
 print("\n📋 ADMIN LOGIN:")
-print("   URL: http://localhost:5173/admin/login")
+print("   URL: http://bookingdrs.com/admin/login")
 print("   Username: admin")
 print("   Password: admin123")
 
 if first_doctor:
     print("\n👨‍⚕️ DOCTOR LOGIN:")
-    print("   URL: http://localhost:5173/doctor/login")
+    print("   URL: http://bookingdrs.com/doctor/login")
     print("   Email: doctor@hospital.com")
     print("   Password: doctor123")
     print(f"   Doctor: {first_doctor.name}")

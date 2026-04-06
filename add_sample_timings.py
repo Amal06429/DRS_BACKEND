@@ -58,5 +58,5 @@ for doctor in sample_doctors[:5]:
 print("\n" + "="*60)
 print("TEST THE API:")
 print("="*60)
-print("GET http://localhost:8000/api/slots/?doctor_code=001&date=2024-12-20")
+print("GET http://bookingdrs.com/api/slots/?doctor_code=001&date=2024-12-20")
 print("="*60)
