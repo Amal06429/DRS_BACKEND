@@ -11,7 +11,7 @@ import logging
 from .models import Appointment
 from .serializers import AppointmentSerializer, BookAppointmentSerializer
 from .slot_utils import generate_slots
-# from whatsapp.services import WhatsAppService
+from whatsapp.services import WhatsAppService
 from hms_sync.models import Doctor
 
 logger = logging.getLogger(__name__)
