@@ -42,7 +42,8 @@ def test_booking_confirmation():
         patient_name="John Doe",
         appointment_date=datetime.now() + timedelta(days=7),
         doctor_code="DOC001",
-        slot_number=1
+        slot_number=1,
+        appointment_id=12345
     )
     print_result("Booking Confirmation", result)
     return result.get('success', False)

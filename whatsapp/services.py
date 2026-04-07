@@ -34,7 +34,7 @@ class WhatsAppService:
     """Service for sending WhatsApp messages"""
     
     @staticmethod
-    def send_booking_confirmation(phone_number, patient_name, appointment_date, doctor_code, slot_number, slot_start_time=None, slot_end_time=None):
+    def send_booking_confirmation(phone_number, patient_name, appointment_date, doctor_code, slot_number, slot_start_time=None, slot_end_time=None, appointment_id=None):
         """
         Send WhatsApp message confirming appointment booking
         
@@ -46,6 +46,7 @@ class WhatsAppService:
             slot_number: Slot number
             slot_start_time: Slot start time (HH:MM format)
             slot_end_time: Slot end time (HH:MM format)
+            appointment_id: Appointment ID for generating ticket number
         
         Returns:
             dict: Response from WhatsApp API
@@ -74,6 +75,9 @@ class WhatsAppService:
             # Format slot time range
             slot_time_display = f"{slot_start_time}-{slot_end_time}" if slot_start_time and slot_end_time else formatted_time
             
+            # Generate unique ticket number from appointment ID
+            ticket_number = f"TKT-{appointment_id:06d}" if appointment_id else "TKT-PENDING"
+            
             message = f"""
 Hello {patient_name},
 
@@ -83,8 +87,8 @@ Your appointment has been successfully confirmed.
 
 **Appointment Details:**
 📅 Date: {formatted_date}
-🕐 Slot Time: {slot_time_display} 
-
+🕐 Slot Time: {slot_time_display}
+🎟️ Ticket Number: {ticket_number}
 
 Best regards,
 

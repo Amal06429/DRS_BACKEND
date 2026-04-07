@@ -58,7 +58,8 @@ class BookAppointmentView(APIView):
                         doctor_code=appointment.doctor_code,
                         slot_number=appointment.slot_number,
                         slot_start_time=slot_start_display,
-                        slot_end_time=slot_end_display
+                        slot_end_time=slot_end_display,
+                        appointment_id=appointment.id
                     )
                 except Doctor.DoesNotExist:
                     whatsapp_result = WhatsAppService.send_booking_confirmation(
@@ -66,7 +67,8 @@ class BookAppointmentView(APIView):
                         patient_name=appointment.patient_name,
                         appointment_date=appointment.appointment_date,
                         doctor_code=appointment.doctor_code,
-                        slot_number=appointment.slot_number
+                        slot_number=appointment.slot_number,
+                        appointment_id=appointment.id
                     )
                 except Exception as e:
                     whatsapp_result = {'success': False, 'message': f'Error: {str(e)}'}
