@@ -88,7 +88,7 @@ Your appointment has been successfully confirmed.
 **Appointment Details:**
 📅 Date: {formatted_date}
 🕐 Slot Time: {slot_time_display}
-🎟️ Ticket Number: {ticket_number}
+🎟️ OP NO: {ticket_number}
 
 Best regards,
 
