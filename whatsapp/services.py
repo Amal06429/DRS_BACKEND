@@ -78,21 +78,18 @@ class WhatsAppService:
             # Generate unique ticket number from appointment ID
             ticket_number = f"TKT-{appointment_id:06d}" if appointment_id else "TKT-PENDING"
             
-            message = f"""
-Hello {patient_name},
+            message = f"""Hello {patient_name},
 
 Thank you for booking your appointment! ✅
 
 Your appointment has been successfully confirmed.
 
-**Appointment Details:**
+Appointment Details:
 📅 Date: {formatted_date}
 🕐 Slot Time: {slot_time_display}
-🎟️ OP NO: {ticket_number}
+🎟️ Booking NO: {ticket_number}
 
-Best regards,
-
-            """.strip()
+Best regards,"""
             
             payload = {
                 "secret": WHATSAPP_SECRET,
