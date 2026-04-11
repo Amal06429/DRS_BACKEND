@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 # WhatsApp API Configuration
 WHATSAPP_API_URL = "https://app.dxing.in/api/send/whatsapp"
 WHATSAPP_SECRET = "7417cf1e2ef4953d6b49a132230486a2fd243f96"
-WHATSAPP_ACCOUNT = "1775020906918317b57931b6b7a7d29490fe5ec9f969ccab6a146eb"
+WHATSAPP_ACCOUNT = "1775885690918317b57931b6b7a7d29490fe5ec9f969d9dd7a672a3"
 
 
 def clean_phone_number(phone_number):
