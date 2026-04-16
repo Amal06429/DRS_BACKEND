@@ -28,7 +28,12 @@ SECRET_KEY = 'django-insecure-8b*dc4d7^edop3i5i3e=3t%y9bjmotfv40&nq&)df$)!j4*!3#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['bookingdrs.com', 'www.bookingdrs.com',]
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'bookingdrs.com',
+    'www.bookingdrs.com',
+]
 
 
 # Application definition
