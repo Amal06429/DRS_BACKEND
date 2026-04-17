@@ -160,6 +160,80 @@ class AdminCreateAppointmentView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AdminStatsView(APIView):
+    """API endpoint for admin dashboard statistics"""
+    permission_classes = [AllowAny]  # Should be IsAdminUser in production
+    
+    def get(self, request):
+        """Get comprehensive appointment statistics for admin dashboard"""
+        from django.db.models import Count, Q
+        
+        # Total appointments
+        total_appointments = Appointment.objects.count()
+        
+        # Appointments by status
+        appointments_by_status = {
+            'pending': Appointment.objects.filter(status='pending').count(),
+            'accepted': Appointment.objects.filter(status='accepted').count(),
+            'rejected': Appointment.objects.filter(status='rejected').count(),
+        }
+        
+        # Appointments by doctor (top 5)
+        appointments_by_doctor = list(
+            Appointment.objects
+            .values('doctor_code')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+        
+        # Appointments by department (top 5)
+        appointments_by_department = list(
+            Appointment.objects
+            .values('department_code')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+        
+        # Today's appointments
+        today = timezone.now().date()
+        todays_appointments = Appointment.objects.filter(
+            appointment_date__date=today
+        ).count()
+        
+        # Upcoming appointments (next 7 days)
+        upcoming_date = today + timedelta(days=7)
+        upcoming_appointments = Appointment.objects.filter(
+            appointment_date__date__gte=today,
+            appointment_date__date__lte=upcoming_date,
+            status='accepted'
+        ).count()
+        
+        # This month's appointments
+        current_month_start = timezone.now().replace(day=1)
+        if timezone.now().month == 12:
+            next_month_start = current_month_start.replace(year=timezone.now().year + 1, month=1)
+        else:
+            next_month_start = current_month_start.replace(month=timezone.now().month + 1)
+        
+        this_month_appointments = Appointment.objects.filter(
+            created_at__gte=current_month_start,
+            created_at__lt=next_month_start
+        ).count()
+        
+        return Response({
+            'summary': {
+                'total_appointments': total_appointments,
+                'todays_appointments': todays_appointments,
+                'upcoming_appointments': upcoming_appointments,
+                'this_month_appointments': this_month_appointments,
+            },
+            'by_status': appointments_by_status,
+            'by_doctor': appointments_by_doctor,
+            'by_department': appointments_by_department,
+            'timestamp': timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+
+
 class DoctorAppointmentsView(APIView):
     """API endpoint for doctors to view their ACCEPTED appointments only"""
     permission_classes = [AllowAny]  # Should be authenticated doctor in production
