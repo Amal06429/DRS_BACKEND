@@ -23,6 +23,13 @@ class BookAppointmentView(APIView):
     """API endpoint for booking appointments"""
     permission_classes = [AllowAny]
     
+    def get(self, request):
+        """GET not allowed - use POST to book appointment"""
+        return Response({
+            'error': 'Method not allowed',
+            'detail': 'Use POST request to book an appointment'
+        }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
     def post(self, request):
         serializer = BookAppointmentSerializer(data=request.data)
         if serializer.is_valid():

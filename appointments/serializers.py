@@ -53,6 +53,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
     
     def get_appointment_time(self, obj):
         """Get appointment time in HH:MM format (IST)"""
+        # Return empty string if appointment_date is None
+        if obj.appointment_date is None:
+            return ''
         # Convert UTC to IST
         if timezone.is_aware(obj.appointment_date):
             local_date = timezone.localtime(obj.appointment_date)
@@ -63,6 +66,10 @@ class AppointmentSerializer(serializers.ModelSerializer):
     
     def get_appointment_time_range(self, obj):
         """Get appointment time range (e.g., 09:00 - 09:15) in IST"""
+        # Return empty string if appointment_date is None
+        if obj.appointment_date is None:
+            return ''
+        
         doctor = None
         if obj.doctor_code in self._doctors_cache:
             doctor = self._doctors_cache[obj.doctor_code]
