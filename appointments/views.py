@@ -277,54 +277,62 @@ class UpdateAppointmentStatusView(APIView):
         appointment.status = new_status
         appointment.save()
         
+        message = f'Appointment {new_status}.'
+        
         # Send WhatsApp notification based on status
-        if appointment.phone_number:
-            if new_status == 'accepted':
-                whatsapp_result = WhatsAppService.send_booking_approved(
-                    phone_number=appointment.phone_number,
-                    patient_name=appointment.patient_name,
-                    appointment_date=appointment.appointment_date,
-                    doctor_code=appointment.doctor_code
-                )
-                message = 'Appointment accepted and WhatsApp notification sent to patient.'
-            elif new_status == 'rejected':
-                # Get doctor's average consultation time for slot calculation
-                try:
-                    doctor = Doctor.objects.get(code=appointment.doctor_code)
-                    avgcontime = doctor.avgcontime or 10
-                    
-                    # Convert UTC appointment_date to local timezone (IST)
-                    if timezone.is_aware(appointment.appointment_date):
-                        local_apt_date = timezone.localtime(appointment.appointment_date)
-                    else:
-                        local_apt_date = timezone.make_aware(appointment.appointment_date, timezone.utc)
-                        local_apt_date = timezone.localtime(local_apt_date)
-                    
-                    # Calculate slot times using local datetime
-                    slot_start_display = local_apt_date.strftime('%I:%M')
-                    slot_end_datetime = local_apt_date + timedelta(minutes=avgcontime)
-                    slot_end_display = slot_end_datetime.strftime('%I:%M')
-                    
-                    whatsapp_result = WhatsAppService.send_booking_rejected(
+        if appointment.phone_number and appointment.appointment_date:
+            try:
+                if new_status == 'accepted':
+                    whatsapp_result = WhatsAppService.send_booking_approved(
                         phone_number=appointment.phone_number,
                         patient_name=appointment.patient_name,
                         appointment_date=appointment.appointment_date,
-                        doctor_code=appointment.doctor_code,
-                        slot_number=appointment.slot_number,
-                        slot_start_time=slot_start_display,
-                        slot_end_time=slot_end_display
+                        doctor_code=appointment.doctor_code
                     )
-                except Doctor.DoesNotExist:
-                    whatsapp_result = WhatsAppService.send_booking_rejected(
-                        phone_number=appointment.phone_number,
-                        patient_name=appointment.patient_name,
-                        appointment_date=appointment.appointment_date,
-                        doctor_code=appointment.doctor_code,
-                        slot_number=appointment.slot_number
-                    )
-                message = 'Appointment rejected and WhatsApp notification sent to patient.'
-        else:
+                    message = 'Appointment accepted and WhatsApp notification sent to patient.'
+                elif new_status == 'rejected':
+                    # Get doctor's average consultation time for slot calculation
+                    try:
+                        doctor = Doctor.objects.get(code=appointment.doctor_code)
+                        avgcontime = doctor.avgcontime or 10
+                        
+                        # Convert UTC appointment_date to local timezone (IST)
+                        if timezone.is_aware(appointment.appointment_date):
+                            local_apt_date = timezone.localtime(appointment.appointment_date)
+                        else:
+                            local_apt_date = timezone.make_aware(appointment.appointment_date, timezone.utc)
+                            local_apt_date = timezone.localtime(local_apt_date)
+                        
+                        # Calculate slot times using local datetime
+                        slot_start_display = local_apt_date.strftime('%I:%M')
+                        slot_end_datetime = local_apt_date + timedelta(minutes=avgcontime)
+                        slot_end_display = slot_end_datetime.strftime('%I:%M')
+                        
+                        whatsapp_result = WhatsAppService.send_booking_rejected(
+                            phone_number=appointment.phone_number,
+                            patient_name=appointment.patient_name,
+                            appointment_date=appointment.appointment_date,
+                            doctor_code=appointment.doctor_code,
+                            slot_number=appointment.slot_number,
+                            slot_start_time=slot_start_display,
+                            slot_end_time=slot_end_display
+                        )
+                    except Doctor.DoesNotExist:
+                        whatsapp_result = WhatsAppService.send_booking_rejected(
+                            phone_number=appointment.phone_number,
+                            patient_name=appointment.patient_name,
+                            appointment_date=appointment.appointment_date,
+                            doctor_code=appointment.doctor_code,
+                            slot_number=appointment.slot_number
+                        )
+                    message = 'Appointment rejected and WhatsApp notification sent to patient.'
+            except Exception as e:
+                logger.error(f"WhatsApp notification failed: {str(e)}")
+                message = f'Appointment {new_status}. WhatsApp notification could not be sent.'
+        elif not appointment.phone_number:
             message = f'Appointment {new_status}. No phone number available for WhatsApp notification.'
+        elif not appointment.appointment_date:
+            message = f'Appointment {new_status}. No appointment date set.'
         
         serializer = AppointmentSerializer(appointment)
         return Response({
