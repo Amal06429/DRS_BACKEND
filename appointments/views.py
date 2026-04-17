@@ -112,6 +112,54 @@ class AdminAppointmentsView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class AdminCreateAppointmentView(APIView):
+    """API endpoint for admin to CREATE appointments directly"""
+    permission_classes = [AllowAny]  # Should be IsAdminUser in production
+    
+    def post(self, request):
+        """Create appointment directly with status as 'accepted'"""
+        serializer = BookAppointmentSerializer(data=request.data)
+        if serializer.is_valid():
+            appointment = serializer.save(status='accepted')  # Admin created appointments are auto-accepted
+            response_serializer = AppointmentSerializer(appointment)
+            
+            # Send WhatsApp confirmation message
+            whatsapp_result = {'success': False, 'message': 'No phone number provided'}
+            if appointment.phone_number:
+                try:
+                    doctor = Doctor.objects.get(code=appointment.doctor_code)
+                    avgcontime = doctor.avgcontime or 10
+                    
+                    if timezone.is_aware(appointment.appointment_date):
+                        local_apt_date = timezone.localtime(appointment.appointment_date)
+                    else:
+                        local_apt_date = timezone.make_aware(appointment.appointment_date, timezone.utc)
+                        local_apt_date = timezone.localtime(local_apt_date)
+                    
+                    slot_start_display = local_apt_date.strftime('%I:%M')
+                    slot_end_datetime = local_apt_date + timedelta(minutes=avgcontime)
+                    slot_end_display = slot_end_datetime.strftime('%I:%M')
+                    
+                    whatsapp_result = WhatsAppService.send_booking_approved(
+                        phone_number=appointment.phone_number,
+                        patient_name=appointment.patient_name,
+                        appointment_date=appointment.appointment_date,
+                        doctor_code=appointment.doctor_code
+                    )
+                except Exception as e:
+                    whatsapp_result = {'success': False, 'message': f'Error: {str(e)}'}
+            
+            return Response({
+                'message': 'Appointment created by admin successfully.',
+                'appointment': response_serializer.data,
+                'whatsapp_sent': whatsapp_result.get('success', False),
+                'whatsapp_message': whatsapp_result.get('message', '')
+            }, status=status.HTTP_201_CREATED)
+        
+        logger.error(f"Admin appointment creation failed. Errors: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class DoctorAppointmentsView(APIView):
     """API endpoint for doctors to view their ACCEPTED appointments only"""
     permission_classes = [AllowAny]  # Should be authenticated doctor in production
